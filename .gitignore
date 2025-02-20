@@ -1,2 +1,4 @@
 venv
 .venv
+filtered_csv
+extracted_csv

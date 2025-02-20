@@ -54,17 +54,15 @@ def process_csv_and_execute():
         # Exibir o DataFrame filtrado e com as colunas selecionadas
         print(filtered_dataset)
 
-        # Salvar o DataFrame filtrado como um arquivo CSV
-        filtered_dataset.to_csv('filtered_dataset.csv', index=False)
+        # Diretório onde o arquivo CSV filtrado será salvo
+        filtered_dir = os.path.join(os.getcwd(), 'filtered_csv')
+        os.makedirs(filtered_dir, exist_ok=True)
+        filtered_file_path = os.path.join(filtered_dir, 'filtered_dataset.csv')
+
+        filtered_dataset.to_csv(filtered_file_path, index=False)
     else:
         print("Nenhum arquivo com a estrutura esperada foi encontrado.")
 
-    # Executar o arquivo Search.py em sequência
-    try:
-        subprocess.run(['python', 'Search.py'], check=True)
-        print("Search.py executado com sucesso.")
-    except subprocess.CalledProcessError as e:
-        print(f"Erro ao executar Search.py: {e}")
 
 if __name__ == '__main__':
     process_csv_and_execute()
