@@ -1,0 +1,4 @@
+selenium
+pyautogui
+pandas
+chromedriver-autoinstaller
