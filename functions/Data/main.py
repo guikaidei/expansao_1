@@ -1,32 +1,36 @@
 import os
 import pandas as pd
-import subprocess
 
-def process_csv_and_execute():
+def process_csv_and_execute(extract_dir=None, output_file='filtered_dataset.csv'):
     """
-    Esta função realiza os seguintes passos:
-    1. Percorre o diretório 'extracted_csv' para carregar os arquivos CSV.
-    2. Concatena os DataFrames com as colunas necessárias.
-    3. Ordena e filtra os dados de acordo com os critérios definidos.
-    4. Salva o DataFrame filtrado em um arquivo CSV.
-    5. Executa o arquivo 'Search.py' usando subprocess.
-    """
-    # Diretório onde os arquivos CSV extraídos estão armazenados
-    extract_dir = os.path.join(os.getcwd(), 'extracted_csv')
+    Processa e concatena arquivos CSV de um diretório, filtra as linhas que contêm apenas os códigos permitidos
+    na coluna 'Codigos_assuntos', seleciona as colunas 'Tribunal', 'Data_de_Referencia' e 'Processo',
+    e salva o DataFrame resultante em um arquivo CSV.
 
-    # Lista para armazenar todos os DataFrames de cada arquivo CSV
+    Parâmetros:
+        extract_dir (str): Diretório onde os arquivos CSV extraídos estão armazenados.
+                           Se None, utiliza o diretório 'extracted_csv' no diretório atual.
+        output_file (str): Caminho/nome do arquivo CSV de saída. Padrão é 'filtered_dataset.csv'.
+
+    Retorna:
+        DataFrame: O DataFrame filtrado, caso os arquivos com a estrutura esperada sejam encontrados;
+                   caso contrário, retorna None.
+    """
+    if extract_dir is None:
+        extract_dir = os.path.join(os.getcwd(), 'extracted_csv')
+    
+    # Lista para armazenar os DataFrames de cada arquivo CSV
     dataframes = []
-
-    # Carregar e concatenar todos os arquivos CSV em um único DataFrame
+    
+    # Iterar sobre todos os arquivos CSV no diretório
     for file in os.listdir(extract_dir):
         if file.endswith(".csv"):
             file_path = os.path.join(extract_dir, file)
-            
             try:
                 # Tenta ler o arquivo CSV com encoding 'latin1' e ignora linhas com problemas
                 df = pd.read_csv(file_path, delimiter=';', encoding='latin1', on_bad_lines="skip")
                 
-                # Verifica se as colunas necessárias estão no arquivo
+                # Verifica se as colunas necessárias estão presentes
                 if 'Data_de_Referencia' in df.columns and 'Codigos_assuntos' in df.columns:
                     dataframes.append(df)
                 else:
@@ -35,34 +39,57 @@ def process_csv_and_execute():
                 print(f"Erro ao ler o arquivo: {file_path}. O arquivo foi ignorado.")
                 continue
 
-    # Verifica se há dados concatenados
+    # Se houver arquivos válidos, concatena e processa os dados
     if dataframes:
         # Concatenar todos os DataFrames em um único DataFrame
         dataset = pd.concat(dataframes, ignore_index=True)
 
-        # Ordenar o DataFrame pela coluna 'Data_de_Referencia' do mais novo para o mais velho
-        # Convertendo a coluna para datetime para garantir a ordenação correta
+        # Converter a coluna 'Data_de_Referencia' para datetime e ordenar do mais novo para o mais antigo
         dataset['Data_de_Referencia'] = pd.to_datetime(dataset['Data_de_Referencia'], errors='coerce')
         dataset = dataset.sort_values(by='Data_de_Referencia', ascending=False)
 
-        # Filtrar as linhas onde a coluna 'Codigos_assuntos' contém o código 14012
-        filtered_dataset = dataset[dataset['Codigos_assuntos'].astype(str).str.contains('14012', na=False)]
+        # --- Início da filtragem dos códigos permitidos ---
 
-        # Selecionar apenas as colunas 'Tribunal', 'Data_de_Referencia' e 'Processo'
-        filtered_dataset = filtered_dataset[['Tribunal', 'Data_de_Referencia', 'Processo']]
+        # Função para converter a string em lista de inteiros (ou retornar se já for lista)
+        def parse_codes(s):
+            if isinstance(s, list):
+                return s
+            s = str(s).strip('{}')
+            if not s:
+                return []
+            return [int(x.strip()) for x in s.split(',')]
+        
+        # Aplica a conversão à coluna 'Codigos_assuntos'
+        dataset['Codigos_assuntos'] = dataset['Codigos_assuntos'].apply(parse_codes)
+        
+        # Define os códigos permitidos:
+        # Principais: 14012, 14016
+        # Subsidiárias: 14008, 14009, 14010
+        codigos_permitidos = {14012, 14016, 14008, 14009, 14010}
+        
+        # Função para filtrar os códigos permitidos em cada lista
+        def filtra_codigos(lista):
+            return [codigo for codigo in lista if codigo in codigos_permitidos]
+        
+        # Aplica o filtro à coluna
+        dataset['Codigos_assuntos'] = dataset['Codigos_assuntos'].apply(filtra_codigos)
+        
+        # Remove as linhas onde não há nenhum código permitido
+        dataset_filtrado = dataset[dataset['Codigos_assuntos'].apply(lambda x: len(x) > 0)]
+        
+        # --- Fim da filtragem dos códigos permitidos ---
 
-        # Exibir o DataFrame filtrado e com as colunas selecionadas
-        print(filtered_dataset)
-
-        # Diretório onde o arquivo CSV filtrado será salvo
-        filtered_dir = os.path.join(os.getcwd(), 'filtered_csv')
-        os.makedirs(filtered_dir, exist_ok=True)
-        filtered_file_path = os.path.join(filtered_dir, 'filtered_dataset.csv')
-
-        filtered_dataset.to_csv(filtered_file_path, index=False)
+        # Selecionar apenas as colunas desejadas
+        dataset_filtrado = dataset_filtrado[['Tribunal', 'Data_de_Referencia', 'Processo']]
+        
+        # Exibir e salvar o DataFrame filtrado
+        print(dataset_filtrado)
+        dataset_filtrado.to_csv(output_file, index=False)
+        print(f"DataFrame filtrado salvo em '{output_file}'.")
+        return dataset_filtrado
     else:
         print("Nenhum arquivo com a estrutura esperada foi encontrado.")
-
+        return None
 
 if __name__ == '__main__':
     process_csv_and_execute()
