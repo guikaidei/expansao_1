@@ -3,4 +3,6 @@ venv
 filtered_csv
 extracted_csv
 **/__pycache__/
+__pycache__/
+*.py[cod]
 downloads

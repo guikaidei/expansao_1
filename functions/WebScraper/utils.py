@@ -7,7 +7,7 @@ import pyautogui
 def getGrau(driver, graus):
     try:
         dropdown_grau = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[3]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[3]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div/i'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[2]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[3]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div'))
         )
         dropdown_grau.click()
         print("Dropdown de Grau encontrado e expandido.")
@@ -40,7 +40,7 @@ def getGrau(driver, graus):
 def getIndicador(driver, indicadores):
     try:
         dropdown_grau = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[3]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[2]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div/i'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[2]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[2]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div'))
         )
         dropdown_grau.click()
         print("Dropdown de Indicador encontrado e expandido.")
@@ -65,7 +65,7 @@ def getTribunal(driver, tribunais):
         # 9. Clicar no dropdown de Tribunal para expandir as opções uma vez
         try:
             dropdown_grau = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[3]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[1]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div'))
+                EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[2]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[1]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div/div'))
             )
             dropdown_grau.click()
             print("Dropdown de Tribunal encontrado e expandido.")
@@ -99,7 +99,7 @@ def getTribunal(driver, tribunais):
         # 11. Clicar no dropdown de Tribunal para expandir as opções uma vez
         try:
             dropdown_grau = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[3]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[1]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div'))
+                EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[2]/transform/div/div[2]/visual-container-group/transform/div/div[2]/visual-container-group[1]/transform/div/div[2]/visual-container[1]/transform/div/div[3]/div/div/visual-modern/div/div/div[2]/div/div'))
             )
             dropdown_grau.click()
             print("Dropdown de Tribunal encontrado e expandido.")
@@ -114,7 +114,7 @@ def getTribunal(driver, tribunais):
 def download(driver):
     try:
         dropdown_grau = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[3]/transform/div/div[2]/visual-container[3]/transform/div/div[3]/div/div/visual-modern/div/iframe'))
+            EC.element_to_be_clickable((By.XPATH, '//*[@id="pvExplorationHost"]/div/div/exploration/div/explore-canvas/div/div[2]/div/div[2]/div[2]/visual-container-repeat/visual-container-group[2]/transform/div/div[2]/visual-container[3]/transform/div/div[3]/div/div'))
         )
         dropdown_grau.click()
         print("Download encontrado e expandido.")
