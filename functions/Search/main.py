@@ -8,12 +8,11 @@ import os
 import shutil
 import json
 import base64
-from Captcha.main import audio_to_text
 import pandas as pd
 from selenium import webdriver
-from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.common.exceptions import NoSuchElementException
+from Search.Captcha.main import audio_to_text
 
 
 def runSearch(numero_processo):
@@ -181,6 +180,8 @@ def consultar_processos(csv_file='filtered_dataset.csv'):
     for index, row in filtered_dataset.iterrows():
         tribunal = row['Tribunal']
         processo = row['Processo']
+
+        print(processo)
         
         # Verifica se o tribunal é TRT8
         if tribunal == 'TRT8':
@@ -196,6 +197,82 @@ def consultar_processos(csv_file='filtered_dataset.csv'):
                 
                 time.sleep(10)  # Ajuste conforme a velocidade de carregamento
                 print(f"Consulta realizada para o processo: {processo}")
+
+                time.sleep(2)
+
+                WebDriverWait(driver, 5).until(
+                    EC.presence_of_element_located((By.ID, 'btnCarregarAudio'))
+                )
+
+                # Passando pelo captcha
+                bypass_captcha = False
+
+                while not bypass_captcha:
+                    time.sleep(2)
+                    print("checando se o captcha foi resolvido...")
+
+                    # Verifica se o botão de audio do captcha está presente
+                    captcha_audio_button = driver.find_elements(By.ID, 'btnCarregarAudio')
+
+                    print(captcha_audio_button)
+                    
+                    # Verifica se o botão de recarregar o captcha está presente
+                    reload_button = driver.find_elements(By.ID, 'btnRecarregar')
+
+                    print(reload_button)
+
+                    time.sleep(2)
+
+                    if reload_button or captcha_audio_button:
+                        print("Captcha não resolvido.")
+
+                        if reload_button:
+                            reload_button[0].click()
+                        elif captcha_audio_button:
+                            captcha_audio_button[0].click()
+                            
+                        print("Botão de recarregar clicado.")
+
+                        time.sleep(2)
+
+                        # Encontra a resposta da API com o áudio do captcha
+                        for request in driver.requests:
+                            if "audio" in request.url:
+                                print(f"URL: {request.url}")
+                                print(f"Status Code: {request.response.status_code}")
+                                response = request.response.body
+                        
+                        data = json.loads(response.decode("utf-8"))
+
+                        audio_base64 = data['audio']
+
+                        # Converter o áudio do captcha em texto
+                        captcha_text = audio_to_text(audio_base64)
+                        
+                        # transforma a lista em uma string de numeros e as letras maiusculas em minusculas
+                        captcha_text = ''.join(captcha_text).lower()
+                        print(f"Texto do captcha: {captcha_text}")
+
+                        captcha_input = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.ID, 'captchaInput'))
+                        )
+
+                        # Preencher o campo de texto do captcha
+                        captcha_input.send_keys(captcha_text)
+                        print("Texto do captcha preenchido.")
+
+                        time.sleep(5) # Tirar depois
+
+                        submit_button = WebDriverWait(driver, 10).until(
+                            EC.element_to_be_clickable((By.ID, 'btnEnviar'))
+                        )
+
+                        submit_button.click()
+                        print("Botão de enviar captcha clicado.")
+
+                    else:
+                        print("Captcha resolvido com sucesso.")
+                        bypass_captcha = True
 
                 # 2. Aguarda mais alguns segundos para a página carregar completamente
                 time.sleep(15)
