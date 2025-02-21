@@ -3,6 +3,7 @@ import pandas as pd
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
+from selenium.common.exceptions import NoSuchElementException
 
 def consultar_processos(csv_file='filtered_dataset.csv'):
     """
@@ -36,16 +37,58 @@ def consultar_processos(csv_file='filtered_dataset.csv'):
             time.sleep(3)  # Aguarda o carregamento da página
 
             try:
-                # Localiza o campo de entrada do número do processo
+                # 1. Localiza o campo de entrada e envia o número do processo
                 input_field = driver.find_element(By.XPATH, '//*[@id="nrProcessoInput"]')
                 input_field.clear()
                 input_field.send_keys(processo)
                 input_field.send_keys(Keys.RETURN)
                 
+                time.sleep(10)  # Ajuste conforme a velocidade de carregamento
                 print(f"Consulta realizada para o processo: {processo}")
-                time.sleep(15)  # Aguarda o carregamento dos resultados
+
+                # 2. Aguarda mais alguns segundos para a página carregar completamente
+                time.sleep(15)
+
+                # 3. Extrai o ID único do final da URL (após o '#')
+                current_url = driver.current_url
+                print(f"URL atual: {current_url}")
+
+                if '#' in current_url:
+                    unique_id = current_url.split('#')[-1]  # Pega tudo após o '#'
+                else:
+                    print("URL não contém '#'. Não é possível extrair o ID.")
+                    unique_id = None
+                
+                if unique_id:
+                    try:
+                        # 4. Montar o XPath com base nesse ID e clicar no elemento
+                        xpath = f"//*[@id='doc_{unique_id}']/div"
+                        elemento = driver.find_element(By.XPATH, xpath)
+                        elemento.click()
+                        print("Elemento encontrado e clicado com sucesso!")
+
+                        # 5. Dar um tempo para o conteúdo (botão de download) carregar
+                        time.sleep(3)
+
+                        # 6. Localiza e clica no botão de download
+                        try:
+                            botao_download = driver.find_element(By.XPATH, "//*[@id='botoes-documento2']/button/span/i")
+                            botao_download.click()
+                            print("Download solicitado com sucesso!")
+                            time.sleep(5)  # tempo para iniciar o download
+                        except NoSuchElementException:
+                            print("Não foi possível encontrar o botão de download.")
+                    
+                    except Exception as e:
+                        print(f"Erro ao localizar elemento com o ID doc_{unique_id}: {e}")
+                else:
+                    print("Não foi possível extrair o ID da URL.")
+            
             except Exception as e:
                 print(f"Erro ao consultar o processo {processo}: {e}")
 
     # Fecha o navegador ao final das consultas
     driver.quit()
+
+if __name__ == "__main__":
+    consultar_processos("filtered_dataset.csv")
