@@ -3,8 +3,8 @@ import pandas as pd
 
 def process_csv_and_execute(extract_dir=None, output_file='filtered_dataset.csv'):
     """
-    Processa e concatena arquivos CSV de um diretório, filtra as linhas que contêm o código 14012 
-    na coluna 'Codigos_assuntos', seleciona as colunas 'Tribunal', 'Data_de_Referencia' e 'Processo', 
+    Processa e concatena arquivos CSV de um diretório, filtra as linhas que contêm apenas os códigos permitidos
+    na coluna 'Codigos_assuntos', seleciona as colunas 'Tribunal', 'Data_de_Referencia' e 'Processo',
     e salva o DataFrame resultante em um arquivo CSV.
 
     Parâmetros:
@@ -48,20 +48,48 @@ def process_csv_and_execute(extract_dir=None, output_file='filtered_dataset.csv'
         dataset['Data_de_Referencia'] = pd.to_datetime(dataset['Data_de_Referencia'], errors='coerce')
         dataset = dataset.sort_values(by='Data_de_Referencia', ascending=False)
 
-        # Filtrar as linhas onde 'Codigos_assuntos' contém o código 14012
-        filtered_dataset = dataset[dataset['Codigos_assuntos'].astype(str).str.contains('14012', na=False)]
+        # --- Início da filtragem dos códigos permitidos ---
+
+        # Função para converter a string em lista de inteiros (ou retornar se já for lista)
+        def parse_codes(s):
+            if isinstance(s, list):
+                return s
+            s = str(s).strip('{}')
+            if not s:
+                return []
+            return [int(x.strip()) for x in s.split(',')]
+        
+        # Aplica a conversão à coluna 'Codigos_assuntos'
+        dataset['Codigos_assuntos'] = dataset['Codigos_assuntos'].apply(parse_codes)
+        
+        # Define os códigos permitidos:
+        # Principais: 14012, 14016
+        # Subsidiárias: 14008, 14009, 14010
+        codigos_permitidos = {14012, 14016, 14008, 14009, 14010}
+        
+        # Função para filtrar os códigos permitidos em cada lista
+        def filtra_codigos(lista):
+            return [codigo for codigo in lista if codigo in codigos_permitidos]
+        
+        # Aplica o filtro à coluna
+        dataset['Codigos_assuntos'] = dataset['Codigos_assuntos'].apply(filtra_codigos)
+        
+        # Remove as linhas onde não há nenhum código permitido
+        dataset_filtrado = dataset[dataset['Codigos_assuntos'].apply(lambda x: len(x) > 0)]
+        
+        # --- Fim da filtragem dos códigos permitidos ---
 
         # Selecionar apenas as colunas desejadas
-        filtered_dataset = filtered_dataset[['Tribunal', 'Data_de_Referencia', 'Processo']]
-
+        dataset_filtrado = dataset_filtrado[['Tribunal', 'Data_de_Referencia', 'Processo']]
+        
         # Exibir e salvar o DataFrame filtrado
-        print(filtered_dataset)
-        filtered_dataset.to_csv(output_file, index=False)
+        print(dataset_filtrado)
+        dataset_filtrado.to_csv(output_file, index=False)
         print(f"DataFrame filtrado salvo em '{output_file}'.")
-        return filtered_dataset
+        return dataset_filtrado
     else:
         print("Nenhum arquivo com a estrutura esperada foi encontrado.")
         return None
 
 if __name__ == '__main__':
-    process_csv_and_execute()   
+    process_csv_and_execute()
