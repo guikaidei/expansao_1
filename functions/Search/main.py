@@ -1,43 +1,42 @@
 import time
-from seleniumwire import webdriver
-from selenium.webdriver.common.by import By
-from selenium.webdriver.support.ui import WebDriverWait
-from selenium.webdriver.support import expected_conditions as EC
-import threading
 import os
 import shutil
-import json
-import base64
+import re
 import pandas as pd
-from selenium import webdriver
+from seleniumwire import webdriver  # Para capturar as requests (necessário para obter o áudio do captcha)
+from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from selenium.common.exceptions import NoSuchElementException
-from Search.Captcha.main import audio_to_text
+from Search.captcha import *
 
+def consultar_processos(csv_file='filtered_dataset.csv'):
+    # Tenta ler o CSV
+    try:
+        filtered_dataset = pd.read_csv(csv_file)
+    except FileNotFoundError:
+        print(f"Erro: O arquivo '{csv_file}' não foi encontrado.")
+        return
 
-def runSearch(numero_processo):
-    # Configurações do WebDriver
+    # Configurações do WebDriver (Selenium Wire para capturar as requests do áudio)
     options = webdriver.ChromeOptions()
     options.add_argument('--start-maximized')
 
-    # Definir diretório de download
+    # Diretório de download
     download_dir = os.path.join(os.getcwd(), 'search_downloads')
     if not os.path.exists(download_dir):
         os.makedirs(download_dir)
 
-    # Limpar a pasta de downloads antes de iniciar o processo de webscraping
-    if os.path.exists(download_dir):
-        for file in os.listdir(download_dir):
-            file_path = os.path.join(download_dir, file)
-            try:
-                if os.path.isfile(file_path) or os.path.islink(file_path):
-                    os.unlink(file_path)  # Remove arquivos e links
-                elif os.path.isdir(file_path):
-                    shutil.rmtree(file_path)  # Remove diretórios
-            except Exception as e:
-                print(f"Erro ao excluir o arquivo {file_path}: {e}")
+    # Limpa a pasta de downloads antes de iniciar
+    for file in os.listdir(download_dir):
+        file_path = os.path.join(download_dir, file)
+        try:
+            if os.path.isfile(file_path) or os.path.islink(file_path):
+                os.unlink(file_path)
+            elif os.path.isdir(file_path):
+                shutil.rmtree(file_path)
+        except Exception as e:
+            print(f"Erro ao excluir o arquivo {file_path}: {e}")
 
-
+    # Preferências para download automático
     prefs = {
         'download.default_directory': download_dir,
         'download.prompt_for_download': False,
@@ -46,278 +45,80 @@ def runSearch(numero_processo):
     }
     options.add_experimental_option('prefs', prefs)
 
+    # Inicializa o driver
     driver = webdriver.Chrome(options=options)
 
-    try:
-        # 1. Entrar no link
-        driver.get('https://pje.trt8.jus.br/consultaprocessual/')
-
-        # 2. Selecionar o campo de busca com id
-        search_field = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, 'nrProcessoInput'))
-        )
-        print("Campo de busca encontrado.")
-
-        # 3. Preencher o campo de busca com o número do processo
-        search_field.send_keys(numero_processo)
-        print("Número do processo preenchido.")
-
-        # 4. Clicar no botão de busca
-        search_button = WebDriverWait(driver, 10).until(
-            EC.element_to_be_clickable((By.ID, 'btnPesquisar'))
-        )
-        search_button.click()
-        print("Botão de busca clicado.")
-
-        # Espera para garantir que a página esteja totalmente carregada
-        time.sleep(2)
-
-        WebDriverWait(driver, 5).until(
-            EC.presence_of_element_located((By.ID, 'btnCarregarAudio'))
-        )
-
-        # 5. Passando pelo captcha
-        bypass_captcha = False
-
-        while not bypass_captcha:
-            time.sleep(2)
-            print("checando se o captcha foi resolvido...")
-
-            # Verifica se o botão de audio do captcha está presente
-            captcha_audio_button = driver.find_elements(By.ID, 'btnCarregarAudio')
-
-            print(captcha_audio_button)
-            
-            # Verifica se o botão de recarregar o captcha está presente
-            reload_button = driver.find_elements(By.ID, 'btnRecarregar')
-
-            print(reload_button)
-
-            time.sleep(2)
-
-            if reload_button or captcha_audio_button:
-                print("Captcha não resolvido.")
-
-                if reload_button:
-                    reload_button[0].click()
-                elif captcha_audio_button:
-                    captcha_audio_button[0].click()
-                    
-                print("Botão de recarregar clicado.")
-
-                time.sleep(2)
-
-                # Encontra a resposta da API com o áudio do captcha
-                for request in driver.requests:
-                    if "audio" in request.url:
-                        print(f"URL: {request.url}")
-                        print(f"Status Code: {request.response.status_code}")
-                        response = request.response.body
-                
-                data = json.loads(response.decode("utf-8"))
-
-                audio_base64 = data['audio']
-
-                # Converter o áudio do captcha em texto
-                captcha_text = audio_to_text(audio_base64)
-                
-                # transforma a lista em uma string de numeros e as letras maiusculas em minusculas
-                captcha_text = ''.join(captcha_text).lower()
-                print(f"Texto do captcha: {captcha_text}")
-
-                captcha_input = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.ID, 'captchaInput'))
-                )
-
-                # Preencher o campo de texto do captcha
-                captcha_input.send_keys(captcha_text)
-                print("Texto do captcha preenchido.")
-
-                time.sleep(5) # Tirar depois
-
-                submit_button = WebDriverWait(driver, 10).until(
-                    EC.element_to_be_clickable((By.ID, 'btnEnviar'))
-                )
-
-                submit_button.click()
-                print("Botão de enviar captcha clicado.")
-
-            else:
-                print("Captcha resolvido com sucesso.")
-                bypass_captcha = True
-
-        time.sleep(15) 
-
-    except Exception as e:
-        print(f"Ocorreu um erro inesperado: {e}")
-    finally:
-        driver.quit()
-
-
-
-def consultar_processos(csv_file='filtered_dataset.csv'):
-    """
-    Realiza consultas processuais no site do TRT8 a partir de um arquivo CSV.
-    
-    Parâmetros:
-        csv_file (str): Caminho para o arquivo CSV contendo os dados filtrados.
-                        O arquivo deve conter as colunas 'Tribunal' e 'Processo'.
-                        
-    Caso o arquivo não seja encontrado, a função exibirá uma mensagem de erro.
-    """
-    try:
-        filtered_dataset = pd.read_csv(csv_file)
-    except FileNotFoundError:
-        print(f"Erro: O arquivo '{csv_file}' não foi encontrado. Execute o arquivo Data.py antes de chamar essa função.")
-        return
-
-    # Configurar o WebDriver
-    options = webdriver.ChromeOptions()
-    options.add_argument('--start-maximized')
-    driver = webdriver.Chrome(options=options)
-
-    # Iterar sobre cada linha do DataFrame
+    # Itera sobre cada processo do CSV
     for index, row in filtered_dataset.iterrows():
         tribunal = row['Tribunal']
         processo = row['Processo']
 
-        print(processo)
-        
-        # Verifica se o tribunal é TRT8
+        print(f"\nIniciando consulta para o processo: {processo}")
+        # Filtra apenas o TRT8
         if tribunal == 'TRT8':
-            driver.get('https://pje.trt8.jus.br/consultaprocessual/')
-            time.sleep(3)  # Aguarda o carregamento da página
-
             try:
-                # 1. Localiza o campo de entrada e envia o número do processo
-                input_field = driver.find_element(By.XPATH, '//*[@id="nrProcessoInput"]')
+                # Abre a página de consulta
+                driver.get('https://pje.trt8.jus.br/consultaprocessual/')
+                time.sleep(3)
+
+                # Preenche o campo de busca
+                input_field = driver.find_element(By.ID, 'nrProcessoInput')
                 input_field.clear()
                 input_field.send_keys(processo)
                 input_field.send_keys(Keys.RETURN)
-                
-                time.sleep(10)  # Ajuste conforme a velocidade de carregamento
+                time.sleep(10)
                 print(f"Consulta realizada para o processo: {processo}")
 
-                time.sleep(2)
-
-                WebDriverWait(driver, 5).until(
-                    EC.presence_of_element_located((By.ID, 'btnCarregarAudio'))
-                )
-
-                # Passando pelo captcha
-                bypass_captcha = False
-
-                while not bypass_captcha:
-                    time.sleep(2)
-                    print("checando se o captcha foi resolvido...")
-
-                    # Verifica se o botão de audio do captcha está presente
-                    captcha_audio_button = driver.find_elements(By.ID, 'btnCarregarAudio')
-
-                    print(captcha_audio_button)
-                    
-                    # Verifica se o botão de recarregar o captcha está presente
-                    reload_button = driver.find_elements(By.ID, 'btnRecarregar')
-
-                    print(reload_button)
-
-                    time.sleep(2)
-
-                    if reload_button or captcha_audio_button:
-                        print("Captcha não resolvido.")
-
-                        if reload_button:
-                            reload_button[0].click()
-                        elif captcha_audio_button:
-                            captcha_audio_button[0].click()
-                            
-                        print("Botão de recarregar clicado.")
-
-                        time.sleep(2)
-
-                        # Encontra a resposta da API com o áudio do captcha
-                        for request in driver.requests:
-                            if "audio" in request.url:
-                                print(f"URL: {request.url}")
-                                print(f"Status Code: {request.response.status_code}")
-                                response = request.response.body
-                        
-                        data = json.loads(response.decode("utf-8"))
-
-                        audio_base64 = data['audio']
-
-                        # Converter o áudio do captcha em texto
-                        captcha_text = audio_to_text(audio_base64)
-                        
-                        # transforma a lista em uma string de numeros e as letras maiusculas em minusculas
-                        captcha_text = ''.join(captcha_text).lower()
-                        print(f"Texto do captcha: {captcha_text}")
-
-                        captcha_input = WebDriverWait(driver, 10).until(
-                            EC.element_to_be_clickable((By.ID, 'captchaInput'))
-                        )
-
-                        # Preencher o campo de texto do captcha
-                        captcha_input.send_keys(captcha_text)
-                        print("Texto do captcha preenchido.")
-
-                        time.sleep(5) # Tirar depois
-
-                        submit_button = WebDriverWait(driver, 10).until(
-                            EC.element_to_be_clickable((By.ID, 'btnEnviar'))
-                        )
-
-                        submit_button.click()
-                        print("Botão de enviar captcha clicado.")
-
-                    else:
-                        print("Captcha resolvido com sucesso.")
-                        bypass_captcha = True
-
-                # 2. Aguarda mais alguns segundos para a página carregar completamente
-                time.sleep(15)
-
-                # 3. Extrai o ID único do final da URL (após o '#')
+                # Se a URL bater exatamente com 'detalhe-processo/<numero_processo>',
+                # significa que há múltiplos graus (painel de escolha).
                 current_url = driver.current_url
                 print(f"URL atual: {current_url}")
-
-                if '#' in current_url:
-                    unique_id = current_url.split('#')[-1]  # Pega tudo após o '#'
-                else:
-                    print("URL não contém '#'. Não é possível extrair o ID.")
-                    unique_id = None
+                processo_limpo = re.sub(r'[.-]', '', processo)
                 
-                if unique_id:
+                expected_multi_url = f"https://pje.trt8.jus.br/consultaprocessual/detalhe-processo/{processo_limpo}"
+                print(expected_multi_url)
+                if current_url == expected_multi_url:
+                    print("Processo tem vários graus. Iniciando iteração sobre cada grau.")
                     try:
-                        # 4. Montar o XPath com base nesse ID e clicar no elemento
-                        xpath = f"//*[@id='doc_{unique_id}']/div"
-                        elemento = driver.find_element(By.XPATH, xpath)
-                        elemento.click()
-                        print("Elemento encontrado e clicado com sucesso!")
+                        # Localiza o painel de escolha dos graus
+                        div_painel = driver.find_element(By.ID, 'painel-escolha-processo')
+                        botoes = div_painel.find_elements(By.CLASS_NAME, 'selecao-processo')
+                        print(f"Quantidade de botões (graus) encontrados: {len(botoes)}")
 
-                        # 5. Dar um tempo para o conteúdo (botão de download) carregar
-                        time.sleep(3)
+                        # Para cada grau
+                        for i in range(len(botoes)):
+                            print(f"Clicando no botão de grau {i+1}")
+                            botoes[i].click()
+                            time.sleep(3)
 
-                        # 6. Localiza e clica no botão de download
-                        try:
-                            botao_download = driver.find_element(By.XPATH, "//*[@id='botoes-documento2']/button/span/i")
-                            botao_download.click()
-                            print("Download solicitado com sucesso!")
-                            time.sleep(5)  # tempo para iniciar o download
-                        except NoSuchElementException:
-                            print("Não foi possível encontrar o botão de download.")
-                    
+                            # Em alguns casos, o captcha pode reaparecer
+                            resolver_captcha(driver)
+                            time.sleep(2)
+
+                            # Faz o download da sentença para este grau
+                            download_sentenca(driver)
+                            time.sleep(5)
+
+                            # Se precisar voltar à tela anterior para escolher o próximo grau
+                            # descomente a linha abaixo (depende de como o TRT8 funciona)
+                            #
+                            # driver.back()
+                            # time.sleep(3)
+                            # botoes = div_painel.find_elements(By.TAG_NAME, "button") 
+                            # (reobter a lista de botões, caso seja necessário)
                     except Exception as e:
-                        print(f"Erro ao localizar elemento com o ID doc_{unique_id}: {e}")
+                        print(f"Erro ao iterar sobre os graus para o processo {processo}: {e}")
                 else:
-                    print("Não foi possível extrair o ID da URL.")
-            
+                    print("Processo tem apenas um grau. Prosseguindo para o download.")
+                    # Caso de um único grau
+                    download_sentenca(driver)
+                    time.sleep(5)
+
             except Exception as e:
                 print(f"Erro ao consultar o processo {processo}: {e}")
 
-    # Fecha o navegador ao final das consultas
     driver.quit()
+
 
 if __name__ == "__main__":
     consultar_processos("filtered_dataset.csv")
-
