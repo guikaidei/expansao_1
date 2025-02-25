@@ -97,13 +97,16 @@ def resolver_captcha(driver):
             time.sleep(2)
 
             response = None
+            requests = driver.requests
+            requests.reverse()
             # Procura pela request que contenha "audio" na URL
-            for request in driver.requests:
+            for request in requests:
                 if "audio" in request.url and request.response:
                     print(f"URL de áudio: {request.url}")
                     print(f"Status Code: {request.response.status_code}")
                     response = request.response.body
                     break
+            
 
             if response is None:
                 print("Nenhuma resposta de áudio encontrada.")

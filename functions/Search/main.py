@@ -93,7 +93,7 @@ def consultar_processos(csv_file='filtered_dataset.csv'):
 
                             # Em alguns casos, o captcha pode reaparecer
                             resolver_captcha(driver)
-                            time.sleep(2)
+
 
                             # Faz o download da sentença para este grau
                             download_sentenca(driver)
