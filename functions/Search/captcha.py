@@ -10,25 +10,29 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException
 
 def audio_to_text(audio_base64):
-    # Decodificando o audio base64
+    # Ensure the temp_audio directory exists
+    os.makedirs("temp_audio", exist_ok=True)
+    
+    # Decode the base64 audio
     audio_bytes = base64.b64decode(audio_base64)
-
+    
+    # Save the audio to a file
     with open("temp_audio/download.wav", "wb") as file:
         file.write(audio_bytes)
-
-    # Carregando o modelo de reconhecimento de voz
+    
+    # Load the Whisper model and transcribe the audio
     model = whisper.load_model("turbo")
     result = model.transcribe("temp_audio/download.wav")
-
+    
     print(result["text"])
-
+    
+    # Extract alphanumeric characters for the captcha
     captcha_text = re.findall(r'\b[A-Z]\b|\d+', result["text"])
-
-    #deletando o arquivo de audio da pasta temp_audio
+    
+    # Delete the temporary audio file
     os.remove("temp_audio/download.wav")
-
+    
     return captcha_text
-
 
 def download_sentenca(driver):
     """

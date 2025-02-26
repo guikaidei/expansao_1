@@ -76,7 +76,6 @@ def consultar_processos(csv_file='filtered_dataset.csv'):
                 processo_limpo = re.sub(r'[.-]', '', processo)
                 
                 expected_multi_url = f"https://pje.trt8.jus.br/consultaprocessual/detalhe-processo/{processo_limpo}"
-                print(expected_multi_url)
                 if current_url == expected_multi_url:
                     print("Processo tem vários graus. Iniciando iteração sobre cada grau.")
                     try:
@@ -109,7 +108,10 @@ def consultar_processos(csv_file='filtered_dataset.csv'):
                     except Exception as e:
                         print(f"Erro ao iterar sobre os graus para o processo {processo}: {e}")
                 else:
+                    time.sleep(3)
                     print("Processo tem apenas um grau. Prosseguindo para o download.")
+                    resolver_captcha(driver)
+                    time.sleep(5)
                     # Caso de um único grau
                     download_sentenca(driver)
                     time.sleep(5)
